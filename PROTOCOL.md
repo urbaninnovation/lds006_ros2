@@ -25,6 +25,15 @@ Tests run against recorded sensor output in [`test/data/`](test/data/).
 3.3 V host. The motor needs no separate PWM line — speed is regulated
 internally.
 
+**Power: 5 V, 0.43–0.44 A** — printed on the unit's own label, so this is a
+manufacturer figure rather than our measurement. About 2.2 W, which is more than
+a dev board's 5 V pin should be asked to supply on top of its own draw.
+
+![LDS-006 laser unit, label visible](docs/lds006.jpg)
+
+*The model number and rating are printed on the top face, which makes this the
+quickest way to identify the unit: `LDS-006`, Ecovacs Robotics Co., Ltd.*
+
 Identification procedure if the wire colours differ: with only Vcc and GND
 connected, measure both signal wires against ground. **The line that idles high
 is the sensor's TX** — a UART rests high. This also settles the logic level in

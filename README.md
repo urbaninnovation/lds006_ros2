@@ -9,6 +9,12 @@ Raspberry Pi 4.
 
 > Deutschsprachige Fassung dieser Anleitung: [README.de.md](README.de.md)
 
+![LDS-006 laser unit with its Ecovacs label](docs/lds006.jpg)
+
+*Identification: the model number and power rating are printed on the top face —
+`LDS-006`, `5V`, `0.43-0.44A`, Ecovacs Robotics. Shown here on the bench with an
+ESP32-S3 used for the protocol work.*
+
 ## Why this exists
 
 The LDS-006 uses XV-11 (Neato) **framing**, so every XV-11 driver synchronises
@@ -39,6 +45,10 @@ Full measured specification: **[PROTOCOL.md](PROTOCOL.md)**.
 
 115200 8N1, no level shifter needed for a 3.3 V host. Connect via a USB-serial
 adapter unless you have a spare hardware UART.
+
+**Power: 5 V at 0.43–0.44 A** per the unit's own label — about 2.2 W. That is
+more than a marginal USB port will happily give alongside a host board; feed it
+from a dedicated 5 V supply rather than a dev board's 5 V pin if you can.
 
 **The sensor sends nothing until it receives `startlds$`** (no line terminator).
 A silent sensor is not necessarily a wiring fault.

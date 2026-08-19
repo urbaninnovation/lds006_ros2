@@ -40,6 +40,10 @@ ohnehin meist bei.
 Nutzer `pi` muss in der Gruppe `dialout` sein — für den DDSM ist das schon
 erledigt.
 
+**Stromaufnahme laut Typenschild: 5 V, 0,43–0,44 A**, also rund 2,2 W. Das ist
+mehr, als ein Entwicklungsboard über seinen 5-V-Pin nebenbei abgeben sollte —
+am Pi besser aus einer eigenen 5-V-Quelle speisen.
+
 ## Erst ohne ROS prüfen
 
 ```bash
