@@ -272,6 +272,34 @@ vs. perpendicular):
 | 2500–4000 mm | 90 | 2…228 |
 | 4000–8000 mm | 66 | 2…104 |
 
+### Strength predicts precision
+
+Tracking a per-angle moving mean absolute deviation over ~8 revolutions on a
+static scene gives strength a concrete meaning — it is a usable confidence
+weight, not just a curiosity:
+
+| Signal strength | n | median deviation |
+|---:|---:|---:|
+| 300+ | 17 | **1 mm** |
+| 100–300 | 18 | 2 mm |
+| 50–100 | 35 | 6 mm |
+| 25–50 | 57 | 10 mm |
+| 0–25 | 46 | 8 mm |
+
+A factor of about 8 between strong and weak returns, on the same sensor in the
+same scene. Weight accordingly rather than treating all valid readings alike.
+
+Relative to distance the deviation is roughly **constant at ~0.2 %** (0.19 /
+0.27 / 0.15 / 0.21 % across distance bands), i.e. the error scales with range
+rather than staying absolutely constant. Weak evidence against a pure
+time-of-flight principle, not enough to settle the question.
+
+> Two failure modes are visible in this measure that a single scan hides
+> entirely: a target sitting **at the near limit** (~110 mm) flickers between a
+> valid reading and error `0x88`, showing deviations of several hundred mm; and
+> weak distant returns wander by decimetres **without ever dropping out**, so
+> the dropout rate says nothing about them.
+
 ---
 
 ## 7. Mounting: rotation direction
