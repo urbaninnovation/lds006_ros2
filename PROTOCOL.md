@@ -192,7 +192,10 @@ Raw values 29805–30497, mean 30121.
 Cross-check independent of the field's contents: 9900 byte/s ÷ 22 bytes ÷ 90
 frames = **5.0 rev/s = 300 rpm**. This rules out `/64`.
 
-*This divisor is not documented in any source we found.*
+*No prose source we found states this divisor, but it does appear in code: the
+[LDS006ESP32](https://github.com/lemarsienvoyageur/LDS-006-ESP32) Arduino library
+divides by 100, derived from
+[Aluminum-z's STM32 driver](https://github.com/Aluminum-z/Laser-Radar-LDS-006-Drive-Test).*
 
 ---
 
@@ -301,7 +304,25 @@ robot turning at 30°/s smears a scan by 6°. `slam_toolbox` does not de-skew.
 
 ---
 
-## 9. Hardware (from third-party teardowns, not verified here)
+## 9. Existing implementations
+
+Read before writing another one. Both were checked in August 2026.
+
+**[lemarsienvoyageur/LDS-006-ESP32](https://github.com/lemarsienvoyageur/LDS-006-ESP32)**
+(Arduino, GPL-3.0) — starts and stops the motor correctly and confirms the `/100`
+speed divisor. Four limitations worth knowing before adopting it: it does not
+verify the checksum at all; its receive buffer is 15 bytes against a 22-byte
+frame, so only **sample 0 of each packet** survives and you get 90 points per
+revolution instead of 360; the invalid-data flag is never tested, so dropouts
+vanish silently (they are filtered only incidentally, by a `strength > 0` test);
+and status frames are not handled, saved by the same accident. Its guard
+`0 < an < 360` parses as `(0 < an) < 360` and is always true. The README states
+8N2 and centimetres; the code uses 8N1 and yields millimetres.
+
+**[manuelilg/lds006_lidar_driver](https://github.com/manuelilg/lds006_lidar_driver)**
+(C++, ROS 1) — untouched since 2023, single-line README, not evaluated further.
+
+## 10. Hardware (from third-party teardowns, not verified here)
 
 Controller **GD32F130P6F6**; UART on PA2/PA3 through 100 Ω resistors; motor PWM
 on PA4; SWD port accessible. Power is inductively coupled to the spinning
