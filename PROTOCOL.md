@@ -137,8 +137,14 @@ distance_mm = ((byte1 & 0x3F) << 8) | byte0
 
 If bit 7 is set, byte 0 carries an **error code** instead of a distance.
 
-*Bit 6 as "weak signal" is inherited from the XV-11 convention and was **never
-observed set** on this unit — unverified.*
+*Bit 6 as "weak signal" is inherited from the XV-11 convention. It was never
+observed on a real measurement here. It does appear — but only as part of the
+filler pattern below, where `0x77` happens to have bit 6 set. Treat it as
+unverified.*
+
+> **Strength 0 is never a measurement.** Across all recordings, every genuine
+> reading has a non-zero strength (788 checked). An unflagged sample with
+> strength 0 is the filler described in §5 — see the trap there.
 
 ### Error codes
 
@@ -213,10 +219,22 @@ spin-down:  22814 -> 22377 -> ... -> 4551
 steady state: none
 ```
 
-> **`77 77 00 00` is not an error code.** Bit 7 of the second byte is *clear*, so
-> a parser that does not special-case status frames reads it as a **valid**
-> measurement of 14199 mm. The symptom is a ring of phantom walls at 14 m on
-> every spin-up. Branch on index ≥ `0xFA` **before** computing angles.
+> **`77 77 00 00` is not an error code**, and branching on the frame type is not
+> enough to keep it out.
+>
+> Bit 7 of the second byte is *clear*, so it reads as a **valid** measurement of
+> 14199 mm. The symptom is a ring of phantom walls at 14 m on every spin-up.
+>
+> The subtlety: the filler is **not confined to status frames**. While spinning
+> up, the sensor is already turning and counting angles but not yet measuring, so
+> the same pattern arrives in ordinary **angle frames with index < `0xFA`**. We
+> shipped this bug ourselves — skipping status frames looked sufficient, and the
+> recorded capture happened not to expose it because the phantom values were
+> overwritten before the revolution boundary.
+>
+> The reliable rule is the strength field: **reject any unflagged sample whose
+> strength is 0.** No genuine reading has strength 0 (788 checked), so this costs
+> nothing and catches the filler wherever it appears.
 
 ### Deriving the operating state
 

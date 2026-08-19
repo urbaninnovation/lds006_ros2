@@ -175,6 +175,54 @@ def test_statusrahmen_tragen_fuellung_keinen_fehlercode(anlauf):
     assert not (STATUS_FILL[1] & 0x80)
 
 
+def _baue_rahmen(index: int, speed: int, samples) -> bytes:
+    """Baut einen prüfsummenrichtigen Rahmen — für Fälle, die im Mitschnitt
+    zufällig fehlen könnten."""
+    f = bytearray([0xFA, index, speed & 0xFF, speed >> 8])
+    for s in samples:
+        f += bytes(s)
+    c = sum(f) & 0xFFFF
+    f += bytes((c & 0xFF, c >> 8))
+    return bytes(f)
+
+
+def test_fuellung_in_WINKELrahmen_wird_nicht_zur_messung():
+    """Beim Hochlaufen steht die Füllung in regulären Winkelrahmen (Index < 0xFA).
+    Wer nur auf den Rahmentyp prüft, gibt daraus 14199 mm aus."""
+    p = Lds006Parser(mirror=False)
+    daten = b"".join(
+        _baue_rahmen(0xA0 + i, 50, [STATUS_FILL] * 4) for i in range(PACKETS_PER_REV)
+    ) + _baue_rahmen(0xA0, 50, [STATUS_FILL] * 4)
+    scans = [e for e in p.feed(daten) if isinstance(e, Scan)]
+    assert p.frames_ok == PACKETS_PER_REV + 1
+    assert scans, "eine Umdrehung hätte abgeschlossen werden müssen"
+    assert scans[0].valid_count == 0
+    assert all(s.distance_mm == 0 for s in scans[0].samples)
+
+
+def test_staerke_null_gilt_nie_als_messung():
+    p = Lds006Parser(mirror=False)
+    daten = b"".join(
+        _baue_rahmen(0xA0 + i, 30000, [bytes((0x2C, 0x01, 0x00, 0x00))] * 4)
+        for i in range(PACKETS_PER_REV)
+    ) + _baue_rahmen(0xA0, 30000, [bytes((0x2C, 0x01, 0x00, 0x00))] * 4)
+    scan = next(e for e in p.feed(daten) if isinstance(e, Scan))
+    assert scan.valid_count == 0        # 300 mm, aber Staerke 0 -> keine Messung
+
+
+def test_echter_messwert_bleibt_gueltig():
+    """Gegenprobe, damit die Regel nicht zu viel wegwirft."""
+    p = Lds006Parser(mirror=False)
+    daten = b"".join(
+        _baue_rahmen(0xA0 + i, 30000, [bytes((0x2C, 0x01, 0x64, 0x00))] * 4)
+        for i in range(PACKETS_PER_REV)
+    ) + _baue_rahmen(0xA0, 30000, [bytes((0x2C, 0x01, 0x64, 0x00))] * 4)
+    scan = next(e for e in p.feed(daten) if isinstance(e, Scan))
+    assert scan.valid_count == POINTS_PER_REV
+    assert scan.samples[0].distance_mm == 300
+    assert scan.samples[0].strength == 100
+
+
 def test_parser_gibt_statusrahmen_keine_messwerte_aus(anlauf):
     """Die Gegenprobe zum vorigen Test auf Ebene der Bibliothek."""
     p = Lds006Parser()

@@ -44,11 +44,19 @@ ERR_NONE = 0x00
 ERR_TOO_CLOSE = 0x88      # Ziel näher als die Nahgrenze
 ERR_NO_ECHO = 0x99        # kein Rückstreusignal
 
-# Statusrahmen tragen in allen vier Messfeldern konstant dieses Muster. Bit 7
-# des zweiten Bytes ist dabei NICHT gesetzt — es ist also kein Fehlercode,
-# sondern blosse Füllung. Wer die Felder eines Statusrahmens trotzdem auswertet,
-# erhält daraus eine scheinbar gültige Entfernung von 14199 mm.
+# Füllmuster für „misst gerade nicht". Bit 7 ist dabei NICHT gesetzt, das Muster
+# sieht also wie ein gültiger Messwert aus und ergibt 14199 mm.
+#
+# Es steht nicht nur in Statusrahmen: beim Hochlaufen dreht der Sensor bereits
+# und zählt Winkel, misst aber noch nicht — dann kommt die Füllung in **regulären
+# Winkelrahmen** mit Index < 0xFA. Ein Parser, der nur auf den Rahmentyp achtet,
+# lässt sie durch.
+#
+# Die verlässliche Unterscheidung ist die Signalstärke: über alle Aufzeichnungen
+# hat **kein echter Messwert die Stärke 0** (788 geprüft). Ein unmarkierter Wert
+# mit Stärke 0 ist deshalb keine Messung.
 STATUS_FILL = bytes((0x77, 0x77, 0x00, 0x00))
+ERR_NOT_MEASURING = 0x77  # synthetisch: Füllung statt Messwert, kein Sensor-Fehlercode
 
 # --- Schnittstelle --------------------------------------------------------
 BAUDRATE = 115200
@@ -195,11 +203,14 @@ class Lds006Parser:
         for k in range(SAMPLES_PER_PACKET):
             lo, hi, s_lo, s_hi = frame[4 + k * 4 : 8 + k * 4]
             angle = self.map_angle(index * 4 + k)
-            if hi & FLAG_INVALID:          # Lowbyte trägt dann den Fehlercode
+            strength = s_lo | (s_hi << 8)
+            # Stärke 0 ohne gesetztes Ungültig-Bit ist die Füllung, keine Messung
+            # — sonst käme beim Hochlaufen ein Kranz aus 14199 mm heraus.
+            if hi & FLAG_INVALID or strength == 0:
                 self._samples[angle] = Sample(angle, 0, 0, lo)
             else:
                 self._samples[angle] = Sample(
-                    angle, ((hi & DIST_MASK) << 8) | lo, s_lo | (s_hi << 8), ERR_NONE
+                    angle, ((hi & DIST_MASK) << 8) | lo, strength, ERR_NONE
                 )
         return finished
 
